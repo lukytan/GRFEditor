@@ -19,6 +19,7 @@
 		}
 
 		public TKey Key { get; private set; }
+		public TValue Tuple => _tuple;
 
 		public void Execute(Table<TKey, TValue> table) {
 			_oldValue = _tuple.GetValue(_attribute.Index);

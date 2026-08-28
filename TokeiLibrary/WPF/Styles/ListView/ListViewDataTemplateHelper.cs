@@ -24,35 +24,15 @@ namespace TokeiLibrary.WPF.Styles.ListView {
 		[DllImport("dwmapi.dll", PreserveSig = false)]
 		public static extern bool DwmIsCompositionEnabled();
 
-		public static void GenerateListViewTemplateNew(System.Windows.Controls.ListView list, 
-			GeneralColumnInfo[] columnInfos, ListViewCustomComparer sorter, IList<string> triggers, 
-			params string[] extraCommands) {
+		public static void GenerateListViewTemplateNew(System.Windows.Controls.ListView list,
+			GeneralColumnInfo[] columnInfos, ListViewCustomComparer sorter, IList<string> triggers,
+			bool generateHeader = true,
+			bool generateStyle = true,
+			bool overrideSizeRedraw = false,
+			bool autosort = false,
+			string defaultBrushOverride = null,
+			DataTemplate template = null) {
 			try {
-				bool generateHeader = true;
-				bool generateStyle = true;
-				bool overrideSizeRedraw = false;
-				bool autosort = false;
-				DataTemplate template = null;
-
-				for (int i = 0; i < extraCommands.Length; i++) {
-					if (extraCommands[i] == "generateHeader") {
-						generateHeader = Boolean.Parse(extraCommands[i + 1]);
-					}
-					if (extraCommands[i] == "generateStyle") {
-						generateStyle = Boolean.Parse(extraCommands[i + 1]);
-					}
-					if (extraCommands[i] == "overrideSizeRedraw") {
-						overrideSizeRedraw = Boolean.Parse(extraCommands[i + 1]);
-					}
-					if (extraCommands[i] == "dataTemplate") {
-						template = list.TryFindResource(extraCommands[i + 1]) as DataTemplate;
-					}
-					if (extraCommands[i] == "autosort") {
-						autosort = Boolean.Parse(extraCommands[i + 1]);
-					}
-					i++;
-				}
-
 				if (generateStyle) {
 					_getStyle(list);
 				}
@@ -113,7 +93,7 @@ namespace TokeiLibrary.WPF.Styles.ListView {
 						gridColumn.CellTemplate = _generateImageTemplate(imageColumnInfo);
 					}
 					else {
-						gridColumn.CellTemplate = _generateTemplate(columnInfo, triggers, index == columnInfos.Length - 1);
+						gridColumn.CellTemplate = _generateTemplate(columnInfo, triggers, defaultBrushOverride, index == columnInfos.Length - 1);
 					}
 
 					if (Environment.OSVersion.Version.Major < 6)
@@ -208,13 +188,13 @@ namespace TokeiLibrary.WPF.Styles.ListView {
 			}
 		}
 
-		private static DataTemplate _generateTemplate(GeneralColumnInfo columnInfo, IList<string> triggers, bool isLast) {
-			return _getDataTemplate("{Binding Path=" + columnInfo.DisplayExpression + "}", columnInfo.TextAlignment, triggers, 
+		private static DataTemplate _generateTemplate(GeneralColumnInfo columnInfo, IList<string> triggers, string defaultBrushOverride, bool isLast) {
+			return _getDataTemplate("{Binding Path=" + columnInfo.DisplayExpression + "}", columnInfo.TextAlignment, triggers, defaultBrushOverride, 
 				columnInfo.ToolTipBinding == null ? null : "{Binding Path=" + columnInfo.ToolTipBinding + "}", isLast, columnInfo);
 		}
 
 		private static DataTemplate _generateImageTemplate(ImageColumnInfo columnInfo) {
-			return _getImageDataTemplate("{Binding Path=" + columnInfo.DisplayExpression + "}", TextAlignment.Center, columnInfo.MaxHeight, columnInfo.NoResize);
+			return _getImageDataTemplate("{Binding Path=" + columnInfo.DisplayExpression + "}", TextAlignment.Center, columnInfo.MaxHeight, columnInfo.MinHeight, columnInfo.NoResize);
 		}
 
 		private static DataTemplate _generateDataTemplate(GeneralColumnInfo columnInfo) {
@@ -315,8 +295,8 @@ namespace TokeiLibrary.WPF.Styles.ListView {
 					binding.RelativeSource = new RelativeSource { Mode = RelativeSourceMode.FindAncestor, AncestorType = typeof (ListViewItem) };
 					trigger.Binding = binding;
 					trigger.Setters.Add(new Setter(Control.ForegroundProperty, new SolidColorBrush(Colors.White)));
-					col.CellTemplate = column.IsImage ? _getImageDataTemplate(column.DisplayExpression, column.Alignment, column.MaxHeight, column.NoResize) :
-						_getDataTemplate(column.DisplayExpression, column.Alignment, triggers, column.ToolTipBinding, index == columns.Length - 1, null);
+					col.CellTemplate = column.IsImage ? _getImageDataTemplate(column.DisplayExpression, column.Alignment, column.MaxHeight, column.MinHeight, column.NoResize) :
+						_getDataTemplate(column.DisplayExpression, column.Alignment, triggers, null, column.ToolTipBinding, index == columns.Length - 1, null);
 					if (Environment.OSVersion.Version.Major < 6)
 						col.CellTemplate.Triggers.Add(trigger);
 					grid.Columns.Add(col);
@@ -355,7 +335,7 @@ namespace TokeiLibrary.WPF.Styles.ListView {
 			return XamlReader.Load(xr) as DataTemplate;
 		}
 
-		private static DataTemplate _getImageDataTemplate(string bindingExpression, TextAlignment alignment, double imHeight, bool noResize) {
+		private static DataTemplate _getImageDataTemplate(string bindingExpression, TextAlignment alignment, double imHeight, double minHeight, bool noResize) {
 			XNamespace ns = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
 
 			XElement xDataTemplate;
@@ -375,17 +355,23 @@ namespace TokeiLibrary.WPF.Styles.ListView {
 				//new XAttribute("HorizontalAlignment", alignment == TextAlignment.Center ? HorizontalAlignment.Center : alignment == TextAlignment.Left ? HorizontalAlignment.Left : HorizontalAlignment.Right)));
 			}
 			else {
+				List<object> properties = new List<object>();
+				properties.Add(new XAttribute("Source", bindingExpression));
+				properties.Add(new XAttribute("MaxHeight", imHeight));
+
+				if (minHeight > 0)
+					properties.Add(new XAttribute("MinHeight", minHeight));
+
+				properties.Add(new XAttribute("Stretch", "None"));
+				properties.Add(new XAttribute("RenderOptions.BitmapScalingMode", "HighQuality"));
+				properties.Add(new XAttribute("Margin", "-4 0 -4 0"));
+				properties.Add(new XAttribute("VerticalAlignment", alignment == TextAlignment.Center ? VerticalAlignment.Center : alignment == TextAlignment.Left ? VerticalAlignment.Top : VerticalAlignment.Bottom));
+				properties.Add(new XAttribute("HorizontalAlignment", alignment == TextAlignment.Center ? HorizontalAlignment.Center : alignment == TextAlignment.Left ? HorizontalAlignment.Left : HorizontalAlignment.Right));
+
 				xDataTemplate =
 				new XElement(ns + "DataTemplate",
 							 new XElement(ns + "Image",
-										  new XAttribute("Source", bindingExpression),
-					//new XAttribute("Width", imWidth),
-										  new XAttribute("MaxHeight", imHeight),
-										  new XAttribute("Stretch", "None"),
-										  new XAttribute("RenderOptions.BitmapScalingMode", "HighQuality"),
-										  new XAttribute("Margin", "-4 0 -4 0"),
-										  new XAttribute("VerticalAlignment", alignment == TextAlignment.Center ? VerticalAlignment.Center : alignment == TextAlignment.Left ? VerticalAlignment.Top : VerticalAlignment.Bottom),
-										  new XAttribute("HorizontalAlignment", alignment == TextAlignment.Center ? HorizontalAlignment.Center : alignment == TextAlignment.Left ? HorizontalAlignment.Left : HorizontalAlignment.Right)));
+										  properties));
 			}
 
 			StringReader sr = new StringReader(xDataTemplate.ToString());
@@ -393,7 +379,7 @@ namespace TokeiLibrary.WPF.Styles.ListView {
 			return XamlReader.Load(xr) as DataTemplate;
 		}
 
-		private static DataTemplate _getDataTemplate(string bindingExpression, TextAlignment alignment, IList<string> triggers, string toolTip, bool isLast, GeneralColumnInfo column) {
+		private static DataTemplate _getDataTemplate(string bindingExpression, TextAlignment alignment, IList<string> triggers, string defaultBrushOverride, string toolTip, bool isLast, GeneralColumnInfo column) {
 			XNamespace ns = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
 
 			List<XElement> bindings = new List<XElement>();
@@ -458,7 +444,7 @@ namespace TokeiLibrary.WPF.Styles.ListView {
 				new XElement(ns + "DataTemplate",
 				             new XElement(ns + "TextBlock",
 										  textBlock,
-										  new XAttribute("Foreground", "{DynamicResource TextForeground}")));
+										  new XAttribute("Foreground", defaultBrushOverride ?? "{DynamicResource TextForeground}")));
 			else
 				xDataTemplate =
 				new XElement(ns + "DataTemplate",
@@ -482,6 +468,7 @@ namespace TokeiLibrary.WPF.Styles.ListView {
 			public string Margin { get; set; }
 			public int ImWidth { get; set; }
 			public int MaxHeight { get; set; }
+			public int MinHeight { get; set; }
 			public bool IsImage { get; set; }
 			public bool NoResize { get; set; }
 			public bool UseNewSorter { get; set; }
@@ -517,6 +504,7 @@ namespace TokeiLibrary.WPF.Styles.ListView {
 
 		public class ImageColumnInfo : GeneralColumnInfo {
 			public double MaxHeight { get; set; }
+			public double MinHeight { get; set; }
 			public bool NoResize { get; set; }
 			public bool IsDrawingGroup { get; set; }
 		}

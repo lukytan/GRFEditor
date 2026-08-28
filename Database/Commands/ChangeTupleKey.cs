@@ -18,6 +18,7 @@ namespace Database.Commands {
 		}
 
 		public TKey Key { get; private set; }
+		public TValue Tuple => _conflict;
 
 		public void Execute(Table<TKey, TValue> table) {
 			if (_changePropety == null) {

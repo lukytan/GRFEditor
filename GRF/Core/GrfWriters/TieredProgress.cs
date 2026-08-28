@@ -11,9 +11,9 @@ namespace GRF.Core.GrfWriters {
 		private int _currentTier = 0;
 		public float CurrentProgress = 0;
 		public float OverrideState = 0;
-		private Dictionary<int, long> _weights = new Dictionary<int, long>();
-		private long _totalWeight;
-		private long _totalProcessed;
+		private Dictionary<int, double> _weights = new Dictionary<int, double>();
+		private double _totalWeight;
+		private double _totalProcessed;
 		private IProgress _progressObject;
 
 		public TieredProgress(IProgress progressObject) {
@@ -31,18 +31,36 @@ namespace GRF.Core.GrfWriters {
 			}
 		}
 
+		public void SplitTier(int subDivision) {
+			if (subDivision <= 1)
+				return;
+
+			var currentWeight = _weights[_currentTier];
+			var newWeight = currentWeight / subDivision;
+
+			for (int i = _weights.Count - 1; i > _currentTier; i--)
+				_weights[i + subDivision] = _weights[i];
+
+			for (int i = _currentTier; i < _currentTier + subDivision; i++)
+				_weights[i] = newWeight;
+
+			_totalWeight = 0;
+			for (int i = 0; i < _weights.Count; i++)
+				_totalWeight += _weights[i];
+		}
+
 		public void CompleteTier() {
 			_totalProcessed += _weights[_currentTier];
 			_currentTier++;
-			_progressObject.Progress = Math.Min(99.99f, 100.0f * _totalProcessed / _totalWeight);
+			_progressObject.Progress = (float)Math.Min(99.99f, 100.0f * _totalProcessed / _totalWeight);
 		}
 
 		public void SetTierProgress(int currentCount) {
-			SetTierProgress((float)currentCount / _weights[_currentTier]);
+			SetTierProgress(currentCount / (float)_weights[_currentTier]);
 		}
 
 		public void SetTierProgress(float progress) {
-			_progressObject.Progress = Math.Min(99.99f, (progress * _weights[_currentTier] + _totalProcessed) / _totalWeight * 100.0f);
+			_progressObject.Progress = (float)Math.Min(99.99f, (progress * _weights[_currentTier] + _totalProcessed) / _totalWeight * 100.0f);
 		}
 
 		public void SetSpecialState(int value) {

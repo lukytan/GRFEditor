@@ -10,20 +10,21 @@ namespace Database.Commands {
 		private Func<object, TFieldValue> _getter;
 		private Action<object, TFieldValue> _setter;
 
-		public List<TFieldValue> OldValues;
-		public List<TFieldValue> NewValues;
-		public List<object> BaseModels;
-		public List<TModel> Models;
-		private List<bool> _isModified;
-		public List<TKey> Keys;
+		public TFieldValue[] OldValues;
+		public TFieldValue[] NewValues;
+		public object[] BaseModels;
+		public TModel[] Models;
+		private bool[] _isModified;
+		public TKey[] Keys;
 		private List<TValue> _tuples;
-		private List<int> _listEntriesAdded;
+		private int[] _listEntriesAdded;
 		private string _fieldName;
 		private Func<TModel, TFieldValue> _newValueGetter;
 		private Func<object, List<TModel>> _modelListGetter;
 		private int _listIndex;
 		private bool _isSet = false;
 		private bool _oldValuesSet = false;
+		private bool _newValuesSet = false;
 
 		public ChangeModelsField(List<TValue> tuples, string fieldName, TFieldValue newValue) : this(tuples, fieldName, newValue, null, -1, null) {
 		}
@@ -31,45 +32,44 @@ namespace Database.Commands {
 		public ChangeModelsField(List<TValue> tuples, string fieldName, TFieldValue newValue, Func<object, List<TModel>> modelListGetter, int listIndex, Func<TModel, TFieldValue> newValueGetter = null) {
 			ModelType = typeof(TModel);
 
-			_getter = ReflectionOptimizer.CreateGetter<TFieldValue>(ModelType, fieldName);
-			_setter = ReflectionOptimizer.CreateSetter<TFieldValue>(ModelType, fieldName);
+			_getter = ReflectionOptimizer<TFieldValue>.GetGetter(ModelType, fieldName);
+			_setter = ReflectionOptimizer<TFieldValue>.GetSetter(ModelType, fieldName);
 			_tuples = tuples;
 			_fieldName = fieldName;
 			_newValueGetter = newValueGetter;
 			_modelListGetter = modelListGetter;
 			_listIndex = listIndex;
 
-			OldValues = new List<TFieldValue>(tuples.Count);
-			NewValues = new List<TFieldValue>(tuples.Count);
-			BaseModels = new List<object>(tuples.Count);
-			Models = new List<TModel>(tuples.Count);
-			_isModified = new List<bool>(tuples.Count);
-			Keys = new List<TKey>(tuples.Count);
-			_listEntriesAdded = new List<int>(tuples.Count);
+			OldValues = new TFieldValue[tuples.Count];
+			NewValues = new TFieldValue[tuples.Count];
+			BaseModels = new object[tuples.Count];
+			Models = new TModel[tuples.Count];
+			_isModified = new bool[tuples.Count];
+			Keys = new TKey[tuples.Count];
+			_listEntriesAdded = new int[tuples.Count];
 
 			for (int index = 0; index < tuples.Count; index++) {
-				_listEntriesAdded.Add(0);
-				BaseModels.Add(tuples[index].GetValue(1));
+				_listEntriesAdded[index] = 0;
+				BaseModels[index] = tuples[index].GetModel();
 
 				if (newValueGetter == null) {
-					NewValues.Add(newValue);
+					NewValues[index] = newValue;
 				}
 
-				Keys.Add(tuples[index].GetKey<TKey>());
-				_isModified.Add(tuples[index].Modified);
+				Keys[index] = tuples[index].GetKey<TKey>();
+				_isModified[index] = tuples[index].Modified;
 			}
 
-			_trySetOldValues(true);
+			if (newValueGetter == null)
+				_newValuesSet = true;
 
+			_trySetOldValues(true);
 			Key = tuples[0].GetKey<TKey>();
 		}
 
 		private void _trySetOldValues(bool constructorCall) {
 			if (_oldValuesSet)
 				return;
-
-			Models.Clear();
-			OldValues.Clear();
 
 			if (_modelListGetter != null && constructorCall) {
 				for (int index = 0; index < _tuples.Count; index++) {
@@ -80,8 +80,6 @@ namespace Database.Commands {
 						return;
 				}
 			}
-
-			bool newValuesSet = NewValues.Count > 0;
 
 			for (int index = 0; index < _tuples.Count; index++) {
 				var tuple = _tuples[index];
@@ -96,25 +94,26 @@ namespace Database.Commands {
 					}
 
 					_listEntriesAdded[index] = count;
-					Models.Add(list[_listIndex]);
+					Models[index] = list[_listIndex];
 
-					if (_newValueGetter != null && !newValuesSet) {
-						NewValues.Add(_newValueGetter(Models[index]));
+					if (_newValueGetter != null && !_newValuesSet) {
+						NewValues[index] = _newValueGetter(Models[index]);
 					}
 
-					OldValues.Add(_getter(Models[index]));
+					OldValues[index] = _getter(Models[index]);
 				}
 				else {
-					Models.Add((TModel)BaseModels[index]);
+					Models[index] = (TModel)BaseModels[index];
 
-					if (_newValueGetter != null && !newValuesSet) {
-						NewValues.Add(_newValueGetter(Models[index]));
+					if (_newValueGetter != null && !_newValuesSet) {
+						NewValues[index] = _newValueGetter(Models[index]);
 					}
 
-					OldValues.Add(_getter(Models[index]));
+					OldValues[index] = _getter(Models[index]);
 				}
 			}
 
+			_newValuesSet = true;
 			_oldValuesSet = true;
 		}
 
@@ -123,6 +122,7 @@ namespace Database.Commands {
 		public string CommandDescription => string.Format("[{0}...{1}], change '{2}' with '{3}'", _tuples.First().GetKey<TKey>(), _tuples.Last().GetKey<TKey>(), _fieldName, _valueToString(NewValues[0]).Replace("\r\n", "\\r\\n").Replace("\n", "\\n"));
 
 		public TKey Key { get; private set; }
+		public TValue Tuple => null;
 
 		public void Execute(Table<TKey, TValue> table) {
 			if (!_isSet) {
@@ -173,8 +173,8 @@ namespace Database.Commands {
 
 		public bool CanCombine(ICombinableCommand command) {
 			if (command is ChangeModelsField<TKey, TValue, TModel, TFieldValue> cmd) {
-				if (Keys.Count == cmd.Keys.Count && _fieldName == cmd._fieldName && ModelType == cmd.ModelType && _isSet && cmd._oldValuesSet) {
-					for (int i = 0; i < Keys.Count; i++) {
+				if (Keys.Length == cmd.Keys.Length && _fieldName == cmd._fieldName && ModelType == cmd.ModelType && _isSet && cmd._oldValuesSet) {
+					for (int i = 0; i < Keys.Length; i++) {
 						// type
 						if (Keys[i] is int && cmd.Keys[i] is int) {
 							if ((int)(object)Keys[i] != (int)(object)cmd.Keys[i]) {
@@ -204,7 +204,7 @@ namespace Database.Commands {
 
 		public void Combine<T>(ICombinableCommand command, AbstractCommand<T> abstractCommand) {
 			if (command is ChangeModelsField<TKey, TValue, TModel, TFieldValue> cmd) {
-				for (int i = 0; i < Keys.Count; i++) {
+				for (int i = 0; i < Keys.Length; i++) {
 					NewValues[i] = cmd.NewValues[i];
 				}
 

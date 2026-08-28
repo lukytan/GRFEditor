@@ -18,6 +18,7 @@ namespace GrfToWpfBridge.DrawingComponents {
 		public DrawSlotManager(Canvas canvas, FrameRendererConfiguration rendererConfiguration) {
 			_canvas = canvas;
 			_rendererConfiguration = rendererConfiguration;
+			_rendererConfiguration.ActEditorScalingMode.PropertyChanged += _actEditorScalingMode_PropertyChanged;
 		}
 
 		public List<DrawSlot> DrawSlots = new List<DrawSlot>();
@@ -63,7 +64,7 @@ namespace GrfToWpfBridge.DrawingComponents {
 					drawSlot.Image.VerticalAlignment = VerticalAlignment.Top;
 					drawSlot.Image.HorizontalAlignment = HorizontalAlignment.Left;
 					drawSlot.Image.SnapsToDevicePixels = true;
-					drawSlot.Image.SetValue(RenderOptions.BitmapScalingModeProperty, _rendererConfiguration.ActEditorScalingMode);
+					drawSlot.Image.SetValue(RenderOptions.BitmapScalingModeProperty, _rendererConfiguration.ActEditorScalingMode.Get());
 				
 					_canvas.Children.Add(drawSlot.Image);
 				}
@@ -78,16 +79,22 @@ namespace GrfToWpfBridge.DrawingComponents {
 		}
 
 		public void ImagesDirty() {
-			var scalingMode = _rendererConfiguration.ActEditorScalingMode;
+			var scalingMode = _rendererConfiguration.ActEditorScalingMode.Get();
 
 			foreach (var drawSlot in DrawSlots) {
 				drawSlot.Image.SetValue(RenderOptions.BitmapScalingModeProperty, scalingMode);
 			}
 		}
 
+		private void _actEditorScalingMode_PropertyChanged() {
+			ImagesDirty();
+		}
+
 		public void Unload() {
 			DrawSlots.Clear();
 			_canvas.Children.Clear();
+
+			_rendererConfiguration.ActEditorScalingMode.PropertyChanged -= _actEditorScalingMode_PropertyChanged;
 		}
 	}
 }

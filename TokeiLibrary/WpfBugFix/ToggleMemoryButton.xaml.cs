@@ -37,7 +37,7 @@ namespace TokeiLibrary.WpfBugFix {
 
 			ListViewDataTemplateHelper.GenerateListViewTemplateNew(_listView, new ListViewDataTemplateHelper.GeneralColumnInfo[] {
 			    new ListViewDataTemplateHelper.GeneralColumnInfo {Header = "Commands", DisplayExpression = "CommandDescription", FixedWidth = 230, TextAlignment = TextAlignment.Left, ToolTipBinding = "CommandDescription" }
-			}, null, new string[] { }, "generateHeader", "false");
+			}, null, new string[] { }, generateHeader: false);
 
 			_gridSearchContent.Children.Add(_listView);
 			_listView.MaxHeight = 225;

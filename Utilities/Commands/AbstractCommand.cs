@@ -144,6 +144,8 @@ namespace Utilities.Commands {
 
 						_commandIndexModified = _commandIndexCurrent;
 						OnModifiedStateChanged(default);
+						//StackStatus = StackStatus.Execute;
+						//OnCommandIndexChanged(_commandIndexCurrent <= -1 ? default : _commands[_commandIndexCurrent]);
 						return;
 					}
 
@@ -196,6 +198,8 @@ namespace Utilities.Commands {
 
 						_commandIndexModified = _commandIndexCurrent;
 						OnModifiedStateChanged(default);
+						//StackStatus = StackStatus.Execute;
+						//OnCommandIndexChanged(_commandIndexCurrent <= -1 ? default : _commands[_commandIndexCurrent]);
 						return;
 					}
 

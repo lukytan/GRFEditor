@@ -57,7 +57,7 @@ namespace Utilities {
 			int value;
 
 			if (text.StartsWith("0x", StringComparison.OrdinalIgnoreCase) && text.Length > 2) {
-				value = Convert.ToInt32(text, 16);
+				value = Convert.ToInt32(text.Substring(2), 16);
 			}
 			else {
 				Int32.TryParse(text, out value);
@@ -71,7 +71,7 @@ namespace Utilities {
 
 			if (text.StartsWith("0x", StringComparison.OrdinalIgnoreCase) && text.Length > 2) {
 				try {
-					value = Convert.ToInt32(text, 16);
+					value = Convert.ToInt32(text.Substring(2), 16);
 				}
 				catch {
 					return 0;
@@ -84,11 +84,29 @@ namespace Utilities {
 			return value;
 		}
 
+		public static long TryLongOrHexConverter(string text) {
+			long value;
+
+			if (text.StartsWith("0x", StringComparison.OrdinalIgnoreCase) && text.Length > 2) {
+				try {
+					value = Convert.ToInt64(text.Substring(2), 16);
+				}
+				catch {
+					return 0;
+				}
+			}
+			else {
+				Int64.TryParse(text, out value);
+			}
+
+			return value;
+		}
+
 		public static long LongOrHexConverter(string text) {
 			long value;
 
 			if (text.StartsWith("0x", StringComparison.OrdinalIgnoreCase) && text.Length > 2) {
-				value = Convert.ToInt64(text, 16);
+				value = Convert.ToInt64(text.Substring(2), 16);
 			}
 			else {
 				Int64.TryParse(text, out value);

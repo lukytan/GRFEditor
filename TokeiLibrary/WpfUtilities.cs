@@ -333,6 +333,27 @@ namespace TokeiLibrary {
 			return items.ToArray();
 		}
 
+		public static List<T> FindAllChildren<T>(DependencyObject parent) where T : DependencyObject {
+			if (parent == null) return null;
+			List<T> items = new List<T>();
+
+			int childrenCount = VisualTreeHelper.GetChildrenCount(parent);
+			for (int i = 0; i < childrenCount; i++) {
+				var child = VisualTreeHelper.GetChild(parent, i);
+				// If the child is not of the request child type child
+				
+				if (child is T foundChild) {
+					items.Add(foundChild);
+				}
+				else {
+					// recursively drill down the tree
+					items.AddRange(FindAllChildren<T>(child));
+				}
+			}
+
+			return items;
+		}
+
 		public static TreeViewItem GetTreeViewItemClicked(FrameworkElement sender, TreeView treeView) {
 			Point p = sender.TranslatePoint(new Point(0, 5), treeView);
 			DependencyObject obj = treeView.InputHitTest(p) as DependencyObject;

@@ -7,6 +7,11 @@ using System.Threading;
 using System.Threading.Tasks;
 
 namespace Utilities {
+	/// <summary>
+	/// Wait delayMs before executing the last action.
+	/// If a new action was added before the delayMs delay, then the "timer" is reset and
+	/// you must wait delayMs again.
+	/// </summary>
 	public sealed class Debouncer : IDisposable {
 		private readonly object _lock = new object();
 		private CancellationTokenSource _cts;
@@ -54,6 +59,10 @@ namespace Utilities {
 		}
 	}
 
+	/// <summary>
+	/// Executes an action instantly and has no delay. While the action is being executed, all
+	/// newer actions will be discarded.
+	/// </summary>
 	public sealed class CoalescingExecutor {
 		private int _running;
 		private int _pending;
@@ -81,6 +90,10 @@ namespace Utilities {
 		}
 	}
 
+	/// <summary>
+	/// Executes an action instantly, then wait delayMs. Discards any new action added except the last added one.
+	/// The last action is always executed.
+	/// </summary>
 	public class UpdateDispatcher {
 		private readonly object _lock = new object();
 		private readonly int _delayMs;

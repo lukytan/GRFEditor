@@ -1,6 +1,5 @@
 ﻿using System;
-using System.Linq.Expressions;
-using System.Reflection;
+using Utilities;
 using Utilities.Commands;
 
 namespace Database.Commands {
@@ -20,13 +19,17 @@ namespace Database.Commands {
 		public ModelCommand(TValue tuple, object model, string fieldName, TFieldValue newValue, bool isReversible = true) {
 			_tuple = tuple;
 			_isModified = _tuple.Modified;
+			var modelType = model.GetType();
+
+			var getter = ReflectionOptimizer<TFieldValue>.GetGetter(modelType, fieldName);
+			var setter = ReflectionOptimizer<TFieldValue>.GetSetter(modelType, fieldName);
 
 			var fi = model.GetType().GetField(fieldName);
-			ModelKey = fi.Name;
+			ModelKey = fieldName;
 			ModelValue = _getStringValue(newValue);
 
-			_get = () => (TFieldValue)fi.GetValue(model);
-			_set = v => fi.SetValue(model, v);
+			_get = () => getter(model);
+			_set = v => setter(model, v);
 
 			OldValue = _get();
 			NewValue = newValue;
@@ -52,28 +55,10 @@ namespace Database.Commands {
 			IsReversible = isReversible;
 		}
 
-		public ModelCommand(TValue tuple, Expression<Func<TFieldValue>> expression, TFieldValue newValue, bool isReversible = true) {
-			_tuple = tuple;
-			_isModified = _tuple.Modified;
-
-			var body = (MemberExpression)expression.Body;
-			var pi = (PropertyInfo)body.Member;
-			ModelKey = pi.Name;
-			ModelValue = _getStringValue(newValue);
-
-			_get = expression.Compile();
-			_set = v => pi.SetValue(null, v, null);
-
-			OldValue = _get();
-			NewValue = newValue;
-
-			Key = tuple.GetKey<TKey>();
-			IsReversible = isReversible;
-		}
-
 		public string CommandDescription => $"[{Key}], change '{ModelKey}' with '{ModelValue}'";
 
 		public TKey Key { get; private set; }
+		public TValue Tuple => _tuple;
 
 		public void Execute(Table<TKey, TValue> table) {
 			if (!_isSet) {
@@ -106,6 +91,7 @@ namespace Database.Commands {
 			var cmd = command as ModelCommand<TKey, TValue, TFieldValue>;
 			if (cmd != null) {
 				NewValue = cmd.NewValue;
+				ModelValue = cmd.ModelValue;
 
 				abstractCommand.ExplicitCommandExecution((T)(object)this);
 			}

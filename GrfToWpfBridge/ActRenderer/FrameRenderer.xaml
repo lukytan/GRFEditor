@@ -10,7 +10,7 @@
 	</UserControl.Resources>
 	<Grid Name="_gridBackground" FocusVisualStyle="{x:Null}" SnapsToDevicePixels="True" RenderOptions.BitmapScalingMode="NearestNeighbor" UseLayoutRounding="False">
 		<Grid.Background>
-			<ImageBrush x:Name="_imBrush" ImageSource="/Resources/background.png" TileMode="Tile" Viewport="0,0,16,16" ViewportUnits="Absolute" RenderOptions.BitmapScalingMode="NearestNeighbor" />
+			<ImageBrush x:Name="_imBrush" ImageSource="pack://application:,,,/GrfToWpfBridge;component/Resources/background.png" TileMode="Tile" Viewport="0,0,16,16" ViewportUnits="Absolute" RenderOptions.BitmapScalingMode="NearestNeighbor" />
 		</Grid.Background>
 		<Canvas Name="_primary" ClipToBounds="True" SnapsToDevicePixels="True" FocusVisualStyle="{x:Null}" />
 		<Grid Name="_gridZoom" HorizontalAlignment="Right" VerticalAlignment="Top">

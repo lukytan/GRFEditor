@@ -16,6 +16,7 @@ namespace Database.Commands {
 		}
 
 		public TKey Key { get; private set; }
+		public TValue Tuple => _tuple;
 
 		public void Execute(Table<TKey, TValue> table) {
 			_tuple = table.TryGetTuple(_key);

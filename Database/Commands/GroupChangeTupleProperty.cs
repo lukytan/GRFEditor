@@ -81,6 +81,7 @@ namespace Database.Commands {
 
 		public TKey Key { get; private set; }
 		public List<TKey> Keys { get; private set; }
+		public TValue Tuple => null;
 
 		public bool CanCombine(ICombinableCommand command) {
 			var cmd = command as GroupChangeTupleProperty<TKey, TValue>;

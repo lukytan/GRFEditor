@@ -55,7 +55,7 @@ namespace TokeiLibrary.WPF.Styles.ListView {
 				_getDelegateFloat = TypeUtility<T>.GetMemberGetDelegate<float>(sortColumn);
 			}
 			else {
-				throw new Exception("Unsupported comparer.");
+				throw new Exception("Unsupported comparer: " + _property.PropertyType + "\r\nExcepted a string, integer, long, etc...");
 			}
 		}
 

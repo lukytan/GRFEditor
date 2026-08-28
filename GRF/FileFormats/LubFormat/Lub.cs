@@ -3,11 +3,19 @@ using System.Text;
 using GRF.FileFormats.LubFormat.Types;
 using GRF.IO;
 using Utilities;
+using Utilities.Services;
 
 namespace GRF.FileFormats.LubFormat {
 	public class Lub {
 		public static bool IsCompiled(byte[] data) {
 			return Methods.ByteArrayCompare(data, 0, 4, new byte[] { 0x1b, 0x4c, 0x75, 0x61 }, 0);
+		}
+
+		public static byte[] AutoDecompile(byte[] data) {
+			if (IsCompiled(data))
+				return EncodingService.DetectEncoding(data).GetBytes(new Lub(data).Decompile());
+
+			return data;
 		}
 
 		public static string String_LoopPcBounds = "-- loop_pc_bounds: ";

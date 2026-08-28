@@ -256,6 +256,9 @@ namespace Utilities.Extension {
 		}
 
 		public static string Escape(this String text, EscapeMode mode) {
+			if (String.IsNullOrEmpty(text))
+				return "";
+
 			StringBuilder b = new StringBuilder();
 			Escape(text, b, mode);
 			return b.ToString();
@@ -279,6 +282,33 @@ namespace Utilities.Extension {
 
 		public static long ToLong(this string text) {
 			return FormatConverters.LongOrHexConverter(text ?? "0");
+		}
+
+		public static ulong ToULong(this string text) {
+			return (ulong)FormatConverters.LongOrHexConverter(text ?? "0");
+		}
+
+		public static UInt64 ToUInt64(this string text) {
+			return (UInt64)FormatConverters.LongOrHexConverter(text ?? "0");
+		}
+
+		public static T ToFlag<T>(this string text) where T : struct, Enum {
+			if (String.IsNullOrEmpty(text))
+				return default;
+
+			var value = text.ToLong();
+			return (T)(object)value;
+		}
+
+		// Magic code to count bit count, Hacker's Delight algorithm
+		public static int PopCount(long value) {
+			ulong x = (ulong)value;
+
+			x -= (x >> 1) & 0x5555555555555555UL;
+			x = (x & 0x3333333333333333UL) + ((x >> 2) & 0x3333333333333333UL);
+			x = (x + (x >> 4)) & 0x0F0F0F0F0F0F0F0FUL;
+
+			return (int)((x * 0x0101010101010101UL) >> 56);
 		}
 
 		public static bool IsHexOrDigit(this char c) {

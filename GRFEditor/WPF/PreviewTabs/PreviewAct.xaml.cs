@@ -76,8 +76,7 @@ namespace GRFEditor.WPF.PreviewTabs {
 		private void _bindSettings() {
 			Binder.Bind(_indexSelector._buttonScale, () => GrfEditorConfiguration.PreviewActScaleType, v => GrfEditorConfiguration.PreviewActScaleType = v, delegate {
 				_indexSelector._buttonScale.IsPressed = GrfEditorConfiguration.PreviewActScaleType;
-				_config.ActEditorScalingMode = GrfEditorConfiguration.PreviewActScaleType ? BitmapScalingMode.HighQuality : BitmapScalingMode.NearestNeighbor;
-				_renderer.DrawSlotManager?.ImagesDirty();
+				_config.ActEditorScalingMode.Set(GrfEditorConfiguration.PreviewActScaleType ? BitmapScalingMode.HighQuality : BitmapScalingMode.NearestNeighbor);
 			}, true);
 			Binder.Bind(_cbGrid, () => GrfEditorConfiguration.PreviewActShowGrid, v => GrfEditorConfiguration.PreviewActShowGrid = v, delegate {
 				var color = GrfEditorConfiguration.PreviewActShowGrid ? GrfColors.Black : GrfColors.Transparent;

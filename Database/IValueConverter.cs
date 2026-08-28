@@ -15,11 +15,22 @@ namespace Database {
 
 	public static class DataCopyParser {
 		public static DefaultDataCopyParser DefaultDataCopyParser = new DefaultDataCopyParser();
+		public static ModelCloner DefaultModelCloner = new ModelCloner();
 	}
 
 	public class DefaultDataCopyParser : IDataCopy {
 		public object CopyFrom(object value) {
 			return value;
+		}
+	}
+
+	public class ModelCloner : IDataCopy {
+		public object CopyFrom(object value) {
+			if (value is ICloneable clone) {
+				return clone.Clone();
+			}
+
+			throw new Exception("Data type is not cloneable; '" + value.GetType() + "' must inherit from ICloneable.");
 		}
 	}
 

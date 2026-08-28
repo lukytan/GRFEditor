@@ -50,7 +50,8 @@ namespace GrfToWpfBridge.DrawingComponents {
 		private void _onPropertyChanged() {
 			LinePenHorizontal = new Pen(_frameRenderer.ActRendererConfiguration.BufferedBrushes.GetBrush(GridLineHorizontalBrush), 1);
 			LinePenHorizontal.Freeze();
-			LinePenVertical = new Pen(_frameRenderer.ActRendererConfiguration.BufferedBrushes.GetBrush(GridLineHorizontalBrush), 1);
+			//LinePenVertical = new Pen(_frameRenderer.ActRendererConfiguration.BufferedBrushes.GetBrush(GridLineHorizontalBrush), 1);
+			LinePenVertical = new Pen(_frameRenderer.ActRendererConfiguration.BufferedBrushes.GetBrush(GridLineVerticalBrush), 1);
 			LinePenVertical.Freeze();
 			_renderer?.InvalidateVisual();
 		}

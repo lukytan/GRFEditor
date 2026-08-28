@@ -93,6 +93,8 @@ namespace Utilities {
 				Console.WriteLine("{2}; Elapsed milliseconds : {0}; Elapsed ticks : {1}.", watch.Value.ElapsedMilliseconds, watch.Value.ElapsedTicks, "Timer ID = " + watch.Key);
 				watch.Value.Reset();
 			}
+
+			_watches.Clear();
 		}
 
 		public static void Display(int opId, string extra = "") {
@@ -681,6 +683,20 @@ namespace Utilities {
 			}
 
 			return toReturn.ToString();
+		}
+
+		public static string Aggregate(string[] list, string s) {
+			if (list.Length == 1)
+				return list[0].ToString();
+
+			return string.Join(s, list);
+		}
+
+		public static string Aggregate(List<string> list, string s) {
+			if (list.Count == 1)
+				return list[0].ToString();
+
+			return string.Join(s, list);
 		}
 
 		public static string TypeToString(object obj) {

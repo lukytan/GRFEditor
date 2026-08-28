@@ -1,39 +1,79 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Reflection;
-using System.Text;
+using System.Linq.Expressions;
+using System.Collections.Concurrent;
 
 namespace Utilities {
-	public static class ReflectionOptimizer {
-		// Caches delegates by a unique string key: "FullTypeName.FieldName"
-		public static Func<object, TFieldValue> CreateGetter<TFieldValue>(Type modelType, string fieldName) {
-			FieldInfo fi = modelType.GetField(fieldName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-			if (fi == null) throw new ArgumentException($"Field '{fieldName}' not found on {modelType.Name}");
+	public static class ReflectionOptimizer<TModel, TFieldValue> {
+		private static readonly ConcurrentDictionary<string, Func<TModel, TFieldValue>> Getters = new ConcurrentDictionary<string, Func<TModel, TFieldValue>>();
+		private static readonly ConcurrentDictionary<string, Action<TModel, TFieldValue>> Setters = new ConcurrentDictionary<string, Action<TModel, TFieldValue>>();
 
-			var instanceParam = System.Linq.Expressions.Expression.Parameter(typeof(object), "model");
-			var castInstance = System.Linq.Expressions.Expression.Convert(instanceParam, modelType);
-			var fieldAccess = System.Linq.Expressions.Expression.Field(castInstance, fi);
-
-			// Handle conversion if the underlying field is not a string (optional safety)
-			var castResult = System.Linq.Expressions.Expression.Convert(fieldAccess, typeof(TFieldValue));
-
-			return System.Linq.Expressions.Expression.Lambda<Func<object, TFieldValue>>(castResult, instanceParam).Compile();
+		public static Func<TModel, TFieldValue> GetGetter(string fieldName) {
+			return Getters.GetOrAdd(fieldName, name => {
+				var param = Expression.Parameter(typeof(TModel), "model");
+				var member = Expression.PropertyOrField(param, name);
+				return Expression.Lambda<Func<TModel, TFieldValue>>(member, param).Compile();
+			});
 		}
 
-		public static Action<object, TFieldValue> CreateSetter<TFieldValue>(Type modelType, string fieldName) {
-			FieldInfo fi = modelType.GetField(fieldName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-			if (fi == null) throw new ArgumentException($"Field '{fieldName}' not found on {modelType.Name}");
+		public static Action<TModel, TFieldValue> GetSetter(string fieldName) {
+			return Setters.GetOrAdd(fieldName, name => {
+				var modelParam = Expression.Parameter(typeof(TModel), "model");
+				var valueParam = Expression.Parameter(typeof(TFieldValue), "value");
+				var member = Expression.PropertyOrField(modelParam, name);
 
-			var instanceParam = System.Linq.Expressions.Expression.Parameter(typeof(object), "model");
-			var valueParam = System.Linq.Expressions.Expression.Parameter(typeof(TFieldValue), "value");
+				var assign = Expression.Assign(member, valueParam);
+				return Expression.Lambda<Action<TModel, TFieldValue>>(assign, modelParam, valueParam).Compile();
+			});
+		}
+	}
 
-			var castInstance = System.Linq.Expressions.Expression.Convert(instanceParam, modelType);
-			var fieldAccess = System.Linq.Expressions.Expression.Field(castInstance, fi);
+	public static class ReflectionOptimizer<TFieldValue> {
+		private static ConcurrentDictionary<Type, ConcurrentDictionary<string, Func<object, TFieldValue>>> Getters = new ConcurrentDictionary<Type, ConcurrentDictionary<string, Func<object, TFieldValue>>>();
+		private static ConcurrentDictionary<Type, ConcurrentDictionary<string, Action<object, TFieldValue>>> Setters = new ConcurrentDictionary<Type, ConcurrentDictionary<string, Action<object, TFieldValue>>>();
 
-			// Assign the value to the field: model.Field = value
-			var assignment = System.Linq.Expressions.Expression.Assign(fieldAccess, valueParam);
+		public static Func<object, TFieldValue> GetGetter(Type modelType, string fieldName) {
+			if (!Getters.TryGetValue(modelType, out var getters)) {
+				getters = new ConcurrentDictionary<string, Func<object, TFieldValue>>();
+				Getters[modelType] = getters;
+			}
 
-			return System.Linq.Expressions.Expression.Lambda<Action<object, TFieldValue>>(assignment, instanceParam, valueParam).Compile();
+			return getters.GetOrAdd(fieldName, name => {
+				FieldInfo fi = modelType.GetField(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+				if (fi == null) throw new ArgumentException($"Field '{name}' not found on {modelType.Name}");
+
+				var instanceParam = Expression.Parameter(typeof(object), "model");
+				var castInstance = Expression.Convert(instanceParam, modelType);
+				var fieldAccess = Expression.Field(castInstance, fi);
+
+				// Handle conversion if the underlying field is not a string (optional safety)
+				var castResult = Expression.Convert(fieldAccess, typeof(TFieldValue));
+
+				return Expression.Lambda<Func<object, TFieldValue>>(castResult, instanceParam).Compile();
+			});
+		}
+
+		public static Action<object, TFieldValue> GetSetter(Type modelType, string fieldName) {
+			if (!Setters.TryGetValue(modelType, out var setters)) {
+				setters = new ConcurrentDictionary<string, Action<object, TFieldValue>>();
+				Setters[modelType] = setters;
+			}
+
+			return setters.GetOrAdd(fieldName, name => {
+				FieldInfo fi = modelType.GetField(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+				if (fi == null) throw new ArgumentException($"Field '{name}' not found on {modelType.Name}");
+
+				var instanceParam = Expression.Parameter(typeof(object), "model");
+				var valueParam = Expression.Parameter(typeof(TFieldValue), "value");
+
+				var castInstance = Expression.Convert(instanceParam, modelType);
+				var fieldAccess = Expression.Field(castInstance, fi);
+
+				// Assign the value to the field: model.Field = value
+				var assignment = Expression.Assign(fieldAccess, valueParam);
+
+				return Expression.Lambda<Action<object, TFieldValue>>(assignment, instanceParam, valueParam).Compile();
+			});
 		}
 	}
 }

@@ -11,7 +11,9 @@ namespace Database.Commands {
 		ChangeList,
 	}
 
-	public class ModelListCommand<TKey, TValue, TFieldValue> : ITableCommand<TKey, TValue> where TValue : Tuple {
+	public interface IModelListCommand { }
+
+	public class ModelListCommand<TKey, TValue, TFieldValue> : IModelListCommand, ITableCommand<TKey, TValue> where TValue : Tuple {
 		private TValue _tuple;
 		public List<TFieldValue> Copy;
 		public List<TFieldValue> OldValue;
@@ -61,6 +63,7 @@ namespace Database.Commands {
 		}
 
 		public TKey Key { get; private set; }
+		public TValue Tuple => _tuple;
 
 		public void Execute(Table<TKey, TValue> table) {
 			if (!_isSet) {

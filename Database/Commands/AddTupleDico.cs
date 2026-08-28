@@ -23,6 +23,7 @@ namespace Database.Commands {
 		}
 
 		public TKey Key { get; private set; }
+		public TValue Tuple => _tupleParent;
 
 		public void Execute(Table<TKey, TValue> table) {
 			_propChanged.Execute(_dico);

@@ -18,6 +18,7 @@ namespace GrfToWpfBridge.ActRenderer {
 			ActEditorAnchorColor = new QuickSetting<GrfColor>(_configAsker, "[ActEditor - Anchor color]", GrfColor.ToHex(200, 255, 255, 0), v => new GrfColor(v), v => v.ToHexString());
 			ActEditorGridLineHorizontal = new QuickSetting<GrfColor>(_configAsker, "[ActEditor - Grid line horizontal color]", GrfColor.ToHex(255, 0, 0, 0), v => new GrfColor(v), v => v.ToHexString());
 			ActEditorGridLineVertical = new QuickSetting<GrfColor>(_configAsker, "[ActEditor - Grid line vertical color]", GrfColor.ToHex(255, 0, 0, 0), v => new GrfColor(v), v => v.ToHexString());
+			ActEditorScalingMode = new QuickSetting<BitmapScalingMode>(_configAsker, "[ActEditor - Scale mode]", BitmapScalingMode.NearestNeighbor.ToString(), v => (BitmapScalingMode)Enum.Parse(typeof(BitmapScalingMode), v), v => v.ToString());
 		}
 
 		public QuickSetting<GrfColor> ActEditorSpriteSelectionBorder;
@@ -27,11 +28,11 @@ namespace GrfToWpfBridge.ActRenderer {
 		public QuickSetting<GrfColor> ActEditorAnchorColor;
 		public QuickSetting<GrfColor> ActEditorGridLineHorizontal;
 		public QuickSetting<GrfColor> ActEditorGridLineVertical;
+		public QuickSetting<BitmapScalingMode> ActEditorScalingMode;
 
 		public static int FrameInterval => 24;
 
 		private static bool? _useAliasing;
-		private static BitmapScalingMode? _mode;
 
 		public bool UseAliasing {
 			get {
@@ -43,22 +44,6 @@ namespace GrfToWpfBridge.ActRenderer {
 			set {
 				_configAsker["[ActEditor - Use aliasing]"] = value.ToString();
 				_useAliasing = value;
-			}
-		}
-
-		public BitmapScalingMode ActEditorScalingMode {
-			get {
-				if (_mode != null) {
-					return _mode.Value;
-				}
-
-				var value = (BitmapScalingMode)Enum.Parse(typeof(BitmapScalingMode), _configAsker["[ActEditor - Scale mode]", BitmapScalingMode.NearestNeighbor.ToString()], true);
-				_mode = value;
-				return value;
-			}
-			set {
-				_configAsker["[ActEditor - Scale mode]"] = value.ToString();
-				_mode = value;
 			}
 		}
 
@@ -107,6 +92,9 @@ namespace GrfToWpfBridge.ActRenderer {
 			public string GetDefaultString() {
 				return _defaultValue;
 			}
+
+			public string Default => _defaultValue;
+			public bool IsDefault => _defaultValue == _configAsker[_propertyName, Default];
 		}
 	}
 }

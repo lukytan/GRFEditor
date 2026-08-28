@@ -51,13 +51,16 @@ namespace Database {
 			}
 		}
 
-		public int Find(object input) {
+		public int TryFind(object input) {
 			if (input is string) {
 				string inputS = (string)input;
 
 				inputS = inputS.Replace(" ", "_");
 
 				for (int i = 0; i < Count; i++) {
+					if (_attributes[i].Visibility == VisibleState.Hidden)
+						continue;
+
 					if (String.Compare(GetQueryName(_attributes[i].DisplayName), inputS, StringComparison.OrdinalIgnoreCase) == 0) {
 						return i;
 					}
@@ -89,8 +92,16 @@ namespace Database {
 				}
 			}
 
-			DatabaseExceptions.ThrowAttributeNotFound(input, this);
 			return -1;
+		}
+
+		public int Find(object input) {
+			var r = TryFind(input);
+
+			if (r < 0)
+				DatabaseExceptions.ThrowAttributeNotFound(input, this);
+
+			return r;
 		}
 
 		public IEnumerator<DbAttribute> GetEnumerator() {

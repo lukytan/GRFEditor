@@ -207,7 +207,7 @@
     <ExternalDlls Include="$(ExternalDllsPath)\Gif.Components.dll" Visible="false" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Resources\background.png" />
+    <Resource Include="Resources\background.png" />
   </ItemGroup>
   <Target Name="CopyExternalDlls" BeforeTargets="BeforeBuild">
     <MakeDir Directories="$(GrfEditorDllsPath)" Condition="!Exists('$(GrfEditorDllsPath)')" />

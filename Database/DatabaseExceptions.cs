@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Linq;
+using System.Reflection;
+using Utilities;
 
 namespace Database {
 	public static class DatabaseExceptions {
@@ -9,6 +11,7 @@ namespace Database {
 		public static readonly FormattedExceptionMessage __KeyConstraint = "Cannot set the key to '{0}' because the table's key type is <{1}>.";
 		public static readonly FormattedExceptionMessage __ArgumentNullValue = "The value cannot be null for the argument '{0}'.";
 		public static readonly FormattedExceptionMessage __AttributeNotFound = "Attribute couldn't be found '{0}', known attributes are : \r\n{1}.";
+		public static readonly FormattedExceptionMessage __ModelFieldNotFound = "Model field couldn't be found '{0}', known attributes are : \r\n{1}.";
 
 		internal static DatabaseException GetException(FormattedExceptionMessage exception, params object[] items) {
 			return new DatabaseException(exception, String.Format(exception.Message, items));
@@ -30,6 +33,18 @@ namespace Database {
 
 		internal static void ThrowAttributeNotFound(object attributeKey, AttributeList attributes) {
 			throw GetException(__AttributeNotFound, attributeKey, string.Join(", ", attributes.Attributes.Select(p => p.GetQueryName()).ToArray()));
+		}
+
+		internal static Exception CreateAttributeNotFound(object attributeKey, AttributeList attributes) {
+			return GetException(__AttributeNotFound, attributeKey, string.Join(", ", attributes.Attributes.Select(p => p.GetQueryName()).ToArray()));
+		}
+
+		internal static void ThrowModelFieldNotFound(object attributeKey, Type modelType) {
+			throw GetException(__ModelFieldNotFound, attributeKey, string.Join(", ", TypeTreeHelper.GetObjectTree(modelType).FieldsOrMembers.Where(p => p.Value.Member is FieldInfo).Select(p => p.Key).ToArray()));
+		}
+
+		internal static Exception CreateModelFieldNotFoundException(object attributeKey, Type modelType) {
+			return GetException(__ModelFieldNotFound, attributeKey, string.Join(", ", TypeTreeHelper.GetObjectTree(modelType).FieldsOrMembers.Where(p => p.Value.Member is FieldInfo).Select(p => p.Key).ToArray()));
 		}
 	}
 

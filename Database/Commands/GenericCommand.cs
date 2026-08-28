@@ -15,6 +15,7 @@
 		}
 
 		public TKey Key { get; private set; }
+		public TValue Tuple => null;
 
 		public void Execute(Table<TKey, TValue> table) {
 			_callback(Key, true);

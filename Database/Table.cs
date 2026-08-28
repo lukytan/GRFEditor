@@ -7,6 +7,7 @@ using Utilities;
 
 namespace Database {
 	public class Table<T1, T2> : BaseTable, IEnumerable<T2> where T2 : Tuple {
+		public bool UseUniqueId { get; private set; }
 		public virtual CommandsHolder<T1, T2> Commands { get; private set; }
 		private int _uid = 1;
 
@@ -70,12 +71,11 @@ namespace Database {
 			if (handler != null) handler(this, key, value);
 		}
 
-		public Table(AttributeList list, bool unsafeContext = false) {
-			if (!unsafeContext) {
-				if (typeof (T1) != list.PrimaryAttribute.DataType)
-					throw new Exception("The primary attribute type doesn't match the database primary key");
-			}
+		public Table(AttributeList list, bool useUniqueId) {
+			if (typeof (T1) != list.PrimaryAttribute.DataType)
+				throw new Exception("The primary attribute type doesn't match the database primary key");
 
+			UseUniqueId = useUniqueId;
 			Commands = new CommandsHolder<T1, T2>(this);
 			_list = list;
 		}
@@ -83,12 +83,32 @@ namespace Database {
 		public object this[T1 key, object input] {
 			get {
 				DatabaseExceptions.ThrowIfTraceNotEnabled();
-				int attribute = _list.Find(input);
-				return Get(key, _list.Attributes[attribute]);
+
+				int index = _list.TryFind(input);
+
+				if (index < 0) {
+					if (input is string inputString) {
+						// Attempt to find value on model
+						var model = Get(key, DbAttribute.DefaultModel);
+						return TableHelper.GetValue((int)(object)key, this, model, inputString);
+					}
+
+					throw DatabaseExceptions.CreateAttributeNotFound(input, _list);
+				}
+				else {
+					var attribute = _list.Attributes[index];
+
+					if (attribute.IsModelAttribute) {
+						var model = Get(key, attribute);
+						TableHelper.TrackModel((int)(object)key, this, model);
+						return model;
+					}
+
+					return Get(key, attribute);
+				}
 			}
 			set {
 				DatabaseExceptions.ThrowIfTraceNotEnabled();
-				int attribute = _list.Find(input);
 
 				if (!ContainsKey(key)) {
 					T2 element = Compiled.New2<T2>.Instance();
@@ -98,7 +118,43 @@ namespace Database {
 					Commands.AddTuple(key, element);
 				}
 
-				if (attribute == 0) {
+				int index = _list.TryFind(input);
+
+				if (index < 0) {
+					if (input is string inputString) {
+						// Attempt to find value on model
+						var model = Get(key, DbAttribute.DefaultModel);
+						var result = TypeTreeHelper.GetValue(model, inputString);
+
+						if (result == null || result.Count == 0)
+							throw DatabaseExceptions.CreateModelFieldNotFoundException(input, model.GetType());
+
+						TableHelper.TrackModel((int)(object)key, this, model);
+						var value2 = result.First();
+
+						if (value2 is string valueString) {
+							TypeTreeHelper.SetValue(model, inputString, value.ToString());
+							return;
+						}
+						else if (value2 is Enum valueEnum) {
+							if (valueEnum.GetType().GetEnumUnderlyingType() == typeof(Int64)) {
+								TypeTreeHelper.SetValue(model, inputString, Int64.Parse(value.ToString()));
+								return;
+							}
+							else if (valueEnum.GetType().GetEnumUnderlyingType() == typeof(Int32)) {
+								TypeTreeHelper.SetValue(model, inputString, Int32.Parse(value.ToString()));
+								return;
+							}
+						}
+
+						TypeTreeHelper.SetValue(model, inputString, value.ToString());
+						return;
+					}
+
+					throw DatabaseExceptions.CreateAttributeNotFound(input, _list);
+				}
+
+				if (index == 0) {
 					if (!(value is T1))
 						DatabaseExceptions.ThrowKeyConstraint<T1>(value);
 
@@ -108,18 +164,22 @@ namespace Database {
 						return;
 
 					Commands.ChangeKey(key, newKey);
-					
 					return;
 				}
+				else if (_list[index].IsModelAttribute) {
+					throw new Exception("Cannot replace a model attribute directly.");
+				}
 
-				Commands.Set(_tuples[key], attribute, value);
+				Commands.Set(_tuples[key], index, value);
 			}
 		}
 
-		public T2 this[T1 key] {
+		public object this[T1 key] {
 			get {
 				DatabaseExceptions.ThrowIfTraceNotEnabled();
-				return GetTuple(key);
+				var model = Get(key, DbAttribute.DefaultModel);
+				TableHelper.TrackModel((int)(object)key, this, model);
+				return model;
 			}
 			set {
 				DatabaseExceptions.ThrowIfTraceNotEnabled();
@@ -129,13 +189,26 @@ namespace Database {
 					return;
 				}
 
-				T2 element = Compiled.New2<T2>.Instance();
-				element.Init(key, _list);
-				element.Added = true;
-				element.Copy(value);
-				element.SetRawValue(0, key);
+				if (value is T2 tuple) {
+					T2 element = Compiled.New2<T2>.Instance();
+					element.Init(key, _list);
+					element.Added = true;
+					element.Copy(tuple);
+					element.SetRawValue(0, key);
 
-				Commands.AddTuple(key, element);
+					Commands.AddTuple(key, element);
+				}
+				else if (value is ICloneable cloneable) {
+					T2 element = Compiled.New2<T2>.Instance();
+					element.Init(key, _list);
+					element.Added = true;
+					element.SetRawValue(DbAttribute.DefaultModel, cloneable.Clone());
+
+					Commands.AddTuple(key, element);
+				}
+				else {
+					throw new Exception("Invalid value assigned to table. Expected a model or a tuple.");
+				}
 			}
 		}
 
@@ -363,6 +436,28 @@ namespace Database {
 			this[tuple.GetKey<T1>(), attribute.Index] = value;
 		}
 
+		internal override void CommandSetModel(Tuple tuple, object modelOriginal, object modelCurrent) {
+			tuple.SetRawValue(1, modelOriginal);
+			Commands.Set(tuple as T2, AttributeList[1], modelCurrent, false);
+		}
+
+		internal override bool TryFindModel(object model, out Tuple tuple) {
+			foreach (var entry in _tuples) {
+				if (entry.Value.GetModel() == model) {
+					tuple = entry.Value;
+					return true;
+				}
+			}
+
+			tuple = null;
+			return false;
+		}
+
+		internal override Tuple TryFindTuple(object key) {
+			_tuples.TryGetValue((T1)key, out T2 value);
+			return value;
+		}
+
 		public IEnumerator<T2> GetEnumerator() {
 			return _tuples.Select(p => p.Value).OrderBy(p => p).GetEnumerator();
 		}
@@ -373,7 +468,12 @@ namespace Database {
 
 		public void Add(T1 key) {
 			DatabaseExceptions.ThrowIfTraceNotEnabled();
-			this[key, 0] = key;
+			
+			T2 element = Compiled.New2<T2>.Instance();
+			element.Init(key, _list);
+			element.Added = true;
+
+			Add(key, element);
 		}
 
 		public void Delete(T1 key) {

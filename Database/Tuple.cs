@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Utilities;
 
 namespace Database {
 	public class Tuple : IComparable {
@@ -37,15 +38,20 @@ namespace Database {
 			_elements[0] = key;
 
 			for (int index = 1; index < list.Attributes.Count; index++) {
+				var attribute = list.Attributes[index];
+
 				// This is not a real attribute
-				if (BindingType.IsAssignableFrom(list.Attributes[index].DataType)) {
-					IBinding binding = (IBinding)Activator.CreateInstance(list.Attributes[index].DataType, new object[] { });
+				if (BindingType.IsAssignableFrom(attribute.DataType)) {
+					IBinding binding = (IBinding)Activator.CreateInstance(attribute.DataType, new object[] { });
 					binding.Tuple = this;
-					binding.AttachedAttribute = list.Attributes[index];
+					binding.AttachedAttribute = attribute;
 					_elements[index] = binding;
 				}
+				else if (attribute.IsModelAttribute) {
+					_elements[index] = Activator.CreateInstance(attribute.DataType);
+				}
 				else {
-					_elements[index] = list.Attributes[index].Default;
+					_elements[index] = attribute.Default;
 				}
 			}
 		}
@@ -74,6 +80,12 @@ namespace Database {
 
 		public virtual object this[int index] {
 			get {
+				if (Attributes[index].IsModelAttribute) {
+					var model = GetModel();
+					TableHelper.TrackModel(-1, null, model);
+					return model;
+				}
+
 				DbAttribute attribute = Attributes.Attributes[index];
 
 				if (attribute.DataType == typeof(int)) {
@@ -99,19 +111,77 @@ namespace Database {
 			}
 		}
 
-		public virtual object this[string index] {
+		public virtual object this[string input] {
 			get {
 				DatabaseExceptions.ThrowIfTraceNotEnabled();
-				var attIndex = Attributes.Find(index);
-				return this[attIndex];
+
+				int index = Attributes.TryFind(input);
+
+				if (index < 0) {
+					// Attempt to find value on model
+					var model = GetModel();
+					return TableHelper.GetValue(-1, null, model, input);
+				}
+
+				var attribute = Attributes[index];
+
+				if (attribute.IsModelAttribute) {
+					var model = GetModel();
+					TableHelper.TrackModel(-1, null, model);
+					return model;
+				}
+
+				return this[index];
 			}
 			set {
 				DatabaseExceptions.ThrowIfTraceNotEnabled();
-				var attIndex = Attributes.Find(index);
-				this[attIndex] = value;
+
+				int index = Attributes.TryFind(input);
+
+				if (index < 0) {
+					// Attempt to find value on model
+					var model = GetModel();
+					var result = TypeTreeHelper.GetValue(model, input);
+
+					if (result == null || result.Count == 0)
+						throw DatabaseExceptions.CreateModelFieldNotFoundException(input, model.GetType());
+
+					TableHelper.TrackModel(-1, null, model);
+					var value2 = result.First();
+
+					if (value2 is string valueString) {
+						TypeTreeHelper.SetValue(model, input, value.ToString());
+						return;
+					}
+					else if (value2 is Enum valueEnum) {
+						if (valueEnum.GetType().GetEnumUnderlyingType() == typeof(Int64)) {
+							TypeTreeHelper.SetValue(model, input, Int64.Parse(value.ToString()));
+							return;
+						}
+						else if (valueEnum.GetType().GetEnumUnderlyingType() == typeof(Int32)) {
+							TypeTreeHelper.SetValue(model, input, Int32.Parse(value.ToString()));
+							return;
+						}
+					}
+
+					TypeTreeHelper.SetValue(model, input, value.ToString());
+					return;
+				}
+
+				if (Attributes[index].IsModelAttribute) {
+					throw new Exception("Cannot replace a model attribute directly.");
+				}
+
+				this[index] = value;
 			}
 		}
 
+		public TModel GetModel<TModel>() where TModel : class {
+			return _elements[1] as TModel;
+		}
+		public object GetModel() {
+			return _elements[1];
+		}
 		public virtual T GetValue<T>(int index) {
 			return Attributes.Attributes[index].DataConverter.ConvertFrom<T>(this, GetValue(index));
 		}
@@ -152,7 +222,7 @@ namespace Database {
 		public object DataImage {
 			get {
 				if (GetImageData != null) {
-					return GetImageData();
+					return GetImageData(this);
 				}
 
 				return null;
@@ -180,7 +250,7 @@ namespace Database {
 			return true;
 		}
 
-		public Func<object> GetImageData { get; set; }
+		public Func<Tuple, object> GetImageData { get; set; }
 
 		internal int GetHash() {
 			return String.Join(",", _elements.Select(p => (p ?? "").ToString()).ToArray()).GetHashCode();
@@ -204,7 +274,15 @@ namespace Database {
 			_elements = new object[tuple._elements.Length];
 
 			for (int i = 0; i < tuple._elements.Length; i++) {
-				_elements[i] = tuple._elements[i];
+				if (BindingType.IsAssignableFrom(Attributes[i].DataType)) {
+					IBinding binding = (IBinding)Activator.CreateInstance(Attributes[i].DataType, new object[] { });
+					binding.Tuple = this;
+					binding.AttachedAttribute = Attributes[i];
+					_elements[i] = binding;
+				}
+				else {
+					_elements[i] = tuple.GetRawCopyValue(i);
+				}
 			}
 		}
 	}

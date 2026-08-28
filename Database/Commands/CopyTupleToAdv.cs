@@ -18,6 +18,7 @@
 		}
 
 		public TKey Key { get; private set; }
+		public TValue Tuple => null;
 
 		public void Execute(Table<TKey, TValue> table) {
 			if (_tableDest.ContainsKey(_newKey)) {

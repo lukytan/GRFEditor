@@ -92,6 +92,7 @@ namespace Database.Commands {
 		}
 
 		public TKey Key { get; private set; }
+		public TValue Tuple => null;
 
 		public void Add(ITableCommand<TKey, TValue> command) {
 			_commands.Add(command);

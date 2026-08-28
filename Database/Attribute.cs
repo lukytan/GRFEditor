@@ -2,6 +2,13 @@
 
 namespace Database {
 	public class DbAttribute {
+		public static ModelAttribute DefaultModel;
+
+		static DbAttribute() {
+			DefaultModel = new ModelAttribute(null);
+			DefaultModel.Index = 1;
+		}
+
 		protected bool Equals(DbAttribute other) {
 			return Index == other.Index;
 		}
@@ -17,11 +24,8 @@ namespace Database {
 			return Index;
 		}
 
-		private IAccessor _accessor = AccessFunctions.DefaultAccessor;
-		private IValueConverter _dataConverter = ValueConverter.DefaultConverter;
 		private VisibleState _visibility = VisibleState.Visible;
-		private IDataCopy _dataCopy = DataCopyParser.DefaultDataCopyParser;
-		private DbRequirement _requirements = new DbRequirement();
+
 		public object AttachedObject { get; set; }
 		public bool? IsSearchable { get; set; }
 		public object AttachedAttribute { get; set; }
@@ -30,25 +34,10 @@ namespace Database {
 		public bool IsEnabled { get; set; }
 		public AttributeList Parent { get; internal set; }
 
-		public DbRequirement Requirements {
-			get { return _requirements; }
-			set { _requirements = value; }
-		}
-
-		public IAccessor Accessor {
-			get { return _accessor; }
-			protected set { _accessor = value; }
-		}
-
-		public IValueConverter DataConverter {
-			get { return _dataConverter; }
-			protected set { _dataConverter = value; }
-		}
-
-		public IDataCopy DataCopy {
-			get { return _dataCopy; }
-			set { _dataCopy = value; }
-		}
+		public DbRequirement Requirements { get; set; } = new DbRequirement();
+		public IAccessor Accessor { get; protected set; } = AccessFunctions.DefaultAccessor;
+		public IValueConverter DataConverter { get; protected set; } = ValueConverter.DefaultConverter;
+		public IDataCopy DataCopy { get; set; } = DataCopyParser.DefaultDataCopyParser;
 
 		public DbAttribute(DbAttribute attribute) {
 			AttributeName = attribute.AttributeName;
@@ -58,6 +47,8 @@ namespace Database {
 			Index = attribute.Index;
 			DisplayName = attribute.DisplayName;
 			DataConverter = attribute.DataConverter;
+			DataCopy = attribute.DataCopy;
+			IsModelAttribute = attribute.IsModelAttribute;
 		}
 
 		public DbAttribute(string attributeName, Type domainDefinition, object defaultValue) {
@@ -77,6 +68,7 @@ namespace Database {
 		public string DisplayName { get; protected set; }
 		public string Description { get; protected set; }
 		public bool PrimaryKey { get; protected set; }
+		public bool IsModelAttribute { get; protected set; }
 		public int Index { get; set; }
 		public VisibleState Visibility {
 			get { return _visibility; }
@@ -104,6 +96,14 @@ namespace Database {
 		public PrimaryAttribute(string attributeName, Type domainDefinition, object defaultValue, string domainName = null)
 			: base(attributeName, domainDefinition, defaultValue, domainName) {
 			PrimaryKey = true;
+		}
+	}
+
+	public class ModelAttribute : DbAttribute {
+		public ModelAttribute(Type domainDefinition)
+			: base("Model", domainDefinition, null, "Model") {
+			IsModelAttribute = true;
+			DataCopy = DataCopyParser.DefaultModelCloner;
 		}
 	}
 

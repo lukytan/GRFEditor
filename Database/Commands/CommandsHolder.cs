@@ -157,11 +157,11 @@ namespace Database.Commands {
 		}
 
 		public virtual void SetModelValue<TFieldValue>(TValue tuple, object model, string fieldName, TFieldValue newValue, bool reversible = true) {
-			StoreAndExecute(new ModelCommand<TKey, TValue, TFieldValue>(tuple, model, fieldName, newValue, reversible));
-		}
+			var modelType = model.GetType();
+			var getter = ReflectionOptimizer<TFieldValue>.GetGetter(modelType, fieldName);
+			var setter = ReflectionOptimizer<TFieldValue>.GetSetter(modelType, fieldName);
 
-		public virtual void SetModelValue<TFieldValue>(TValue tuple, Expression<Func<TFieldValue>> expression, TFieldValue newValue, bool reversible = true) {
-			StoreAndExecute(new ModelCommand<TKey, TValue, TFieldValue>(tuple, expression, newValue, reversible));
+			SetModelValue(tuple, () => getter(model), v => setter(model, v), newValue, fieldName, reversible);
 		}
 
 		public virtual void SetModelValue<TFieldValue>(TValue tuple, Func<TFieldValue> getter, Action<TFieldValue> setter, TFieldValue newValue, string fieldName, bool reversible = true) {

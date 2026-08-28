@@ -25,6 +25,7 @@ namespace GrfToWpfBridge.ActRenderer {
 		private BitmapResourceManager _bitmapResourceManager = new BitmapResourceManager();
 		private int _drawIndex;
 		private bool _disposed;
+		public Grid GridZoom => _gridZoom;
 
 		public delegate void RenderUpdateEventHandler(object sender);
 

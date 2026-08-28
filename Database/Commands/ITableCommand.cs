@@ -5,5 +5,6 @@
 		void Undo(Table<TKey, TValue> table);
 		string CommandDescription { get; }
 		TKey Key { get; }
+		TValue Tuple { get; }
 	}
 }
