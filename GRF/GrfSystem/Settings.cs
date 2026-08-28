@@ -13,6 +13,8 @@ namespace GRF.GrfSystem {
 		public static float CpuUsageCritical = 90f;
 		public static bool AddHashFileForThor = false;
 		public static bool FullFileTableEncryptionSupport = false;
+		public static bool DecompileLubOnExtract = false;
+		public static string DecompileLubFileExtension = ".lub";
 
 		static Settings() {
 			LubDecompilerSettings = new LubSettings {

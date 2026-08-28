@@ -79,6 +79,8 @@ namespace GRFEditor {
 			Settings.LockFiles = Configuration.LockFiles;
 			Settings.AddHashFileForThor = Configuration.AddHashFileForThor;
 			Settings.FullFileTableEncryptionSupport = Configuration.FullFileTableEncryptionSupport;
+			Settings.DecompileLubOnExtract = Configuration.DecompileLubOnExtract;
+			Settings.DecompileLubFileExtension = Configuration.DecompileLubFileExtension;
 			TemporaryFilesManager.ClearTemporaryFiles();
 			return encoding;
 		}

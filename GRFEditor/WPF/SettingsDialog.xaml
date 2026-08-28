@@ -111,6 +111,13 @@
 							<CheckBox IsChecked="{Binding Path=(ApplicationConfiguration:GrfEditorConfiguration.AddHashFileForThor), Mode=TwoWay}" Content="Add hash data to Thor files" ToolTip="If enabled, a hash file will be added to Thor patches." />
 							<CheckBox IsChecked="{Binding Path=(ApplicationConfiguration:GrfEditorConfiguration.SaveEditorPosition), Mode=TwoWay}" Content="Save GRF Editor window position" ToolTip="If enabled, the window position and width will be saved upon re-opening the program." />
 							<CheckBox IsChecked="{Binding Path=(ApplicationConfiguration:GrfEditorConfiguration.FullFileTableEncryptionSupport), Mode=TwoWay}" Content="Enable full encryption file table support" ToolTip="If enabled and the GRF's file table is encrypted, an encryption key will be requested when opening the GRF instead of showing a loading error." />
+							<DockPanel>
+								<CheckBox IsChecked="{Binding Path=(ApplicationConfiguration:GrfEditorConfiguration.DecompileLubOnExtract), Mode=TwoWay}" Content="Decompile .lub files on extract. Export format: " ToolTip="If enabled, compiled Lua bytecode (.lub) files will be decompiled to text when extracting from a GRF." />
+								<ComboBox Margin="0 0 3 0" Width="50" HorizontalAlignment="Left" SelectedValue="{Binding Path=(ApplicationConfiguration:GrfEditorConfiguration.DecompileLubFileExtension), Mode=TwoWay}" SelectedValuePath="Content">
+									<ComboBoxItem>.lub</ComboBoxItem>
+									<ComboBoxItem>.lua</ComboBoxItem>
+								</ComboBox>
+							</DockPanel>
 						</StackPanel>
 					</StackPanel>
 				</TabItem>

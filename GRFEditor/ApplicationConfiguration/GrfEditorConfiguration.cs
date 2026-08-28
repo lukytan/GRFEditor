@@ -468,6 +468,22 @@ namespace GRFEditor.ApplicationConfiguration {
 			}
 		}
 
+		public static bool DecompileLubOnExtract {
+			get => Boolean.Parse(ConfigAsker["[GRFEditor - DecompileLubOnExtract]", false.ToString()]);
+			set {
+				ConfigAsker["[GRFEditor - DecompileLubOnExtract]"] = value.ToString();
+				Settings.DecompileLubOnExtract = value;
+			}
+		}
+
+		public static string DecompileLubFileExtension {
+			get => ConfigAsker["[GRFEditor - DecompileLubFileExtension]", ".lub"];
+			set {
+				ConfigAsker["[GRFEditor - DecompileLubFileExtension]"] = value.ToString();
+				Settings.DecompileLubFileExtension = value;
+			}
+		}
+
 		public static int EncodingCodepage {
 			get => Int32.Parse(ConfigAsker["[GRFEditor - Encoding codepage]", "1252"]);
 			set => ConfigAsker["[GRFEditor - Encoding codepage]"] = value.ToString(CultureInfo.InvariantCulture);

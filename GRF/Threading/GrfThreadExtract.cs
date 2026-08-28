@@ -4,7 +4,10 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using GRF.Core;
+using GRF.FileFormats.LubFormat;
+using GRF.GrfSystem;
 using Utilities.Extension;
+using Utilities.Services;
 
 namespace GRF.Threading {
 	public enum ExtractionFailReason {
@@ -96,9 +99,34 @@ namespace GRF.Threading {
 								else
 									dataTmp = Compression.Decompress(dataTmp, entry.SizeDecompressed);
 
-								if (dataTmp != null) {
-									using (FileStream fs = new FileStream(entry.ExtractionFilePath, FileMode.Create, FileAccess.Write, FileShare.None, 4096, FileOptions.WriteThrough))
-										fs.Write(dataTmp, 0, dataTmp.Length);
+								// Check if we should decompile .lub files
+								if (Settings.DecompileLubOnExtract &&
+									entry.RelativePath.IsExtension(".lub") &&
+									Lub.IsCompiled(dataTmp)) {
+									// Decompile the .lub file to text
+									try {
+										var lub = new Lub(dataTmp);
+										string decompiledText = lub.Decompile();
+
+										// Change extension from .lub to chosen extension (default .lub)
+										string extractionPath = entry.ExtractionFilePath.ReplaceExtension(Settings.DecompileLubFileExtension);
+
+										using (FileStream fs = new FileStream(extractionPath, FileMode.Create, FileAccess.Write, FileShare.None, 4096, FileOptions.WriteThrough))
+										using (var writer = new StreamWriter(fs, EncodingService.DisplayEncoding))
+											writer.Write(decompiledText);
+									}
+									catch {
+										// If decompilation fails, fall back to writing the original .lub file
+										using (FileStream fs = new FileStream(entry.ExtractionFilePath, FileMode.Create, FileAccess.Write, FileShare.None, 4096, FileOptions.WriteThrough))
+											fs.Write(dataTmp, 0, dataTmp.Length);
+									}
+								}
+								else {
+									// Normal file extraction
+									if (dataTmp != null) {
+										using (FileStream fs = new FileStream(entry.ExtractionFilePath, FileMode.Create, FileAccess.Write, FileShare.None, 4096, FileOptions.WriteThrough))
+											fs.Write(dataTmp, 0, dataTmp.Length);
+									}
 								}
 							}
 							catch (IOException err) {

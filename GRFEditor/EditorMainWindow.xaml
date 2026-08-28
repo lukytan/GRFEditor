@@ -24,10 +24,7 @@
                 <MenuItem.Header>
                     <Label Content="File" Name="_miFile" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="-5 0 -5 0" />
                 </MenuItem.Header>
-				<MenuItem TokeiLibrary:WpfProperties.ImagePath="add.png">
-                    <MenuItem.Header>
-                        <TextBlock Text="New" Margin="3 0 0 0" VerticalAlignment="Center" />
-                    </MenuItem.Header>
+				<MenuItem TokeiLibrary:WpfProperties.ImagePath="add.png" Header="New">
                     <MenuItem Name="_menuItemNewGrf" TokeiLibrary:WpfProperties.ImagePath="grf-16.png" Header="Grf" InputGestureText="Ctrl-N" Click="_menuItemNewGrf_Click" />
                     <MenuItem TokeiLibrary:WpfProperties.ImagePath="gpf-16.png" Header="Gpf" Click="_menuItemNewGpf_Click" />
                     <MenuItem Name="_menuItemNewRgz" TokeiLibrary:WpfProperties.ImagePath="rgz-16.png" Header="Rgz" Click="_menuItemNewRgz_Click" />
